@@ -1,5 +1,4 @@
-//! The simplest possible example that does something.
-#![allow(clippy::unnecessary_wraps)]
+use std::f32::consts::PI;
 
 use ggez::{
     event,
@@ -8,26 +7,40 @@ use ggez::{
     Context, GameError, GameResult,
 };
 
+use rand::prelude::*;
+
 struct Boid {
     pos: Vec2,
     vel: f32,
     angle: f32,
 }
 
+fn random_vector(max_magnitude: f32, rng: &mut ThreadRng) -> Vec2 {
+    let dist: f32 = rng.gen::<f32>() * max_magnitude;
+    Vec2::from_angle(rng.gen::<f32>() * 2.0 * PI) * dist
+}
+
 impl Boid {
-    fn new() -> Boid {
-        Boid {
-            pos: vec2(100., 100.),
-            vel: 0.,
-            angle: 0.,
+    fn spawn_boids(num: usize, pos: Vec2, spread: f32) -> Vec<Boid> {
+        let mut boids = Vec::new();
+        let mut rnd = rand::thread_rng();
+        for _ in 0..num {
+            let p = pos + random_vector(spread, &mut rnd);
+            boids.push(Boid {
+                pos: p,
+                vel: 1.0,
+                angle: rnd.gen::<f32>() * 360.0,
+            });
         }
+        return boids;
     }
 
     fn update(&mut self, _ctx: &mut Context) {
-        self.pos.x += 1.0;
+        self.pos += Vec2::from_angle(self.angle.to_radians()) * self.vel;
     }
 
     fn draw(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        // TODO: store mesh definitions in state??
         let circle = graphics::Mesh::new_circle(
             ctx,
             graphics::DrawMode::fill(),
@@ -35,52 +48,36 @@ impl Boid {
             10.0,
             2.0,
             Color::WHITE,
-        ).unwrap();
+        )
+        .unwrap();
 
         canvas.draw(&circle, self.pos);
     }
 }
 
 struct GameState {
-    pos_x: f32,
-    circle: graphics::Mesh,
     boids: Vec<Boid>,
 }
 
 impl GameState {
     fn new(ctx: &mut Context) -> GameResult<GameState> {
-        let boids = vec![Boid::new()];
-        let circle = graphics::Mesh::new_circle(
-            ctx,
-            graphics::DrawMode::fill(),
-            vec2(0., 0.),
-            100.0,
-            2.0,
-            Color::WHITE,
-        )?;
+        let boids = Boid::spawn_boids(20, vec2(300.0, 300.0), 50.0);
 
-        Ok(GameState {
-            pos_x: 0.0,
-            circle,
-            boids,
-        })
+        Ok(GameState { boids })
     }
 }
 
 impl event::EventHandler<GameError> for GameState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        self.pos_x = self.pos_x % 800.0 + 1.0;
         for boid in self.boids.iter_mut() {
             boid.update(_ctx);
         }
-        println!("{}", self.pos_x);
 
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::BLACK);
-        canvas.draw(&self.circle, Vec2::new(self.pos_x, 380.0));
         for boid in self.boids.iter_mut() {
             boid.draw(ctx, &mut canvas);
         }
