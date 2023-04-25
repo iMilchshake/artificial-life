@@ -37,6 +37,7 @@ impl Boid {
 
     fn update(&mut self, _ctx: &mut Context) {
         self.pos += Vec2::from_angle(self.angle.to_radians()) * self.vel;
+        self.angle += 0.7
     }
 
     fn draw(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
@@ -50,8 +51,11 @@ impl Boid {
             Color::WHITE,
         )
         .unwrap();
-
         canvas.draw(&circle, self.pos);
+
+        let points = &[vec2(0.0, 0.0), Vec2::from_angle(self.angle.to_radians())*10.0];
+        let line = graphics::Mesh::new_line(ctx, points, 2.0, Color::GREEN).unwrap();
+        canvas.draw(&line, self.pos);
     }
 }
 
